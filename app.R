@@ -111,6 +111,22 @@ ui <- fluidPage(
             max   = 200,
             value = 10,
             step  = 1
+         ),
+         hr(),
+         h4("Presets"),
+         fluidRow(
+            column(6, actionButton("preset_baseline", "Baseline high transmission")),
+            column(6, actionButton("preset_llin", "LLINs"))
+         ),
+         fluidRow(
+            column(6, actionButton("preset_irs", "IRS")),
+            column(6, actionButton("preset_immunity", "Partial immunity"))
+         ),
+         fluidRow(
+            column(12, actionButton(
+               "preset_suppression",
+               "Genetic / larval suppression"
+            ))
          )
       ),
 
@@ -143,6 +159,7 @@ ui <- fluidPage(
          p(textOutput("C_current")),
          p(textOutput("R0_current")),
          p(textOutput("R0_regime")),
+         tableOutput("summaryTable"),
          br(),
          # Survivorship curve under exponential mortality (S(t) = p^t).
          plotOutput("Survivorship"),
@@ -151,7 +168,7 @@ ui <- fluidPage(
    )
 )
 
-server <- function(input, output) {
+server <- function(input, output, session) {
    # Helper function for critical vector density (snake_case)
    critical_vector_density <- function(mu, D, b, c, a, p, n) {
       mu / (D * b * c * a^2 * p^n)
@@ -179,6 +196,67 @@ server <- function(input, output) {
          p = p, h = h, g = g, n = n,
          a = a, D = D, b = b, c = c, mu = mu
       )
+   })
+
+   # Preset scenarios --------------------------------------------------------
+   # 1) High transmission baseline (An. gambiae-ish)
+   observeEvent(input$preset_baseline, {
+      updateSliderInput(session, "p", value = 0.90)
+      updateSliderInput(session, "h", value = 0.50)
+      updateSliderInput(session, "g", value = 2.5)
+      updateSliderInput(session, "n", value = 12)
+      updateSliderInput(session, "D", value = 80)
+      updateSliderInput(session, "b", value = 0.30)
+      updateSliderInput(session, "c", value = 0.50)
+      updateSliderInput(session, "m_current", value = 50)
+   })
+
+   # 2) LLINs (reduced host feeding + slightly lower survival)
+   observeEvent(input$preset_llin, {
+      updateSliderInput(session, "p", value = 0.85)
+      updateSliderInput(session, "h", value = 0.25)
+      updateSliderInput(session, "g", value = 2.5)
+      updateSliderInput(session, "n", value = 12)
+      updateSliderInput(session, "D", value = 80)
+      updateSliderInput(session, "b", value = 0.30)
+      updateSliderInput(session, "c", value = 0.50)
+      updateSliderInput(session, "m_current", value = 30)
+   })
+
+   # 3) IRS (strong reduction in survival)
+   observeEvent(input$preset_irs, {
+      updateSliderInput(session, "p", value = 0.75)
+      updateSliderInput(session, "h", value = 0.40)
+      updateSliderInput(session, "g", value = 2.5)
+      updateSliderInput(session, "n", value = 12)
+      updateSliderInput(session, "D", value = 80)
+      updateSliderInput(session, "b", value = 0.30)
+      updateSliderInput(session, "c", value = 0.50)
+      updateSliderInput(session, "m_current", value = 30)
+   })
+
+   # 4) Partial immunity (shorter infectious period + slightly lower b, c)
+   observeEvent(input$preset_immunity, {
+      updateSliderInput(session, "p", value = 0.90)
+      updateSliderInput(session, "h", value = 0.50)
+      updateSliderInput(session, "g", value = 2.5)
+      updateSliderInput(session, "n", value = 12)
+      updateSliderInput(session, "D", value = 40)
+      updateSliderInput(session, "b", value = 0.20)
+      updateSliderInput(session, "c", value = 0.40)
+      updateSliderInput(session, "m_current", value = 50)
+   })
+
+   # 5) Genetic / larval suppression (strong reduction in m)
+   observeEvent(input$preset_suppression, {
+      updateSliderInput(session, "p", value = 0.90)
+      updateSliderInput(session, "h", value = 0.50)
+      updateSliderInput(session, "g", value = 2.5)
+      updateSliderInput(session, "n", value = 12)
+      updateSliderInput(session, "D", value = 80)
+      updateSliderInput(session, "b", value = 0.30)
+      updateSliderInput(session, "c", value = 0.50)
+      updateSliderInput(session, "m_current", value = 5)
    })
 
    # Critical vector density m for R0 = 1
@@ -258,25 +336,25 @@ server <- function(input, output) {
          M <- NA
       }
 
+      # y limits for log-scale (avoid zero)
+      Cpos <- C[C > 0 & is.finite(C)]
+      ymax <- max(Cpos, na.rm = TRUE) * 1.2
+      ymin <- min(Cpos, na.rm = TRUE) * 0.8
+      ylim <- c(ymin, ymax)
+
       par(bty = "n", las = 1)
-      # Check for finite values in C
-      finite_C <- C[is.finite(C)]
-      if (length(finite_C) > 0 && max(finite_C) > 0) {
-         ylim_val <- c(0, max(finite_C) * 1.1)
-      } else {
-         ylim_val <- c(0, 1) # fallback ylim if all C are NA or non-finite
-      }
       plot(log10(m), C,
          col  = "darkgray",
          type = "l",
-         ylim = ylim_val,
+         ylim = ylim,
+         log  = "y", # log-scale for C
          main = "Vectorial Capacity as a function of vector density",
-         ylab = "Vectorial Capacity C (per day)",
+         ylab = "Vectorial Capacity C (per day, log scale)",
          xlab = "No. vectors/host (log10 scale)"
       )
 
       # horizontal threshold R0 = 1: Ccrit = 1/(b c D)
-      if (!is.na(Ccrit)) {
+      if (!is.na(Ccrit) && Ccrit > 0) {
          abline(h = Ccrit, col = "red", lty = 2)
          text(
             x = min(log10(m)) + 0.5,
@@ -286,10 +364,10 @@ server <- function(input, output) {
          )
 
          # arrow for critical M where C crosses the threshold
-         if (is.finite(M) && M > 0 && !is.na(Ccrit) && Ccrit != 0 && log10(M) != -Inf && log10(M) != Inf) {
+         if (is.finite(M) && M > 0) {
             arrows(
                x0 = log10(M), y0 = Ccrit,
-               x1 = log10(M), y1 = 0,
+               x1 = log10(M), y1 = ylim[1],
                col = "blue", lty = 3
             )
          }
@@ -300,7 +378,7 @@ server <- function(input, output) {
          abline(v = log10(input$m_current), col = "orange", lwd = 2)
          text(
             x = log10(input$m_current),
-            y = max(C, na.rm = TRUE) * 0.9,
+            y = ymax * 0.8,
             labels = "current m", col = "orange", pos = 4
          )
       }
@@ -322,22 +400,9 @@ server <- function(input, output) {
          type = "n",
          main = "Survivorship",
          xlab = "No. days after emergence (t)",
-         ylab = "Survivorship S(t)",
-         ylim = c(0, 1)
+         ylab = "Proportion surviving after t days"
       )
-      # Add step function for survivorship
-      lines(t, S, col = "darkgreen", lwd = 2)
-
-      # Annotate expectation of lifespan at emergence
-      if (!is.null(par$mu)) {
-         abline(v = 1 / par$mu, col = "blue", lty = 2)
-         text(
-            x = 1 / par$mu,
-            y = 0.5,
-            labels = "E[T] = 1/μ",
-            col = "blue", adj = 0
-         )
-      }
+      lines(t, S, col = "darkgray", lwd = 2)
    })
 
    # Reactive expression for current vectorial capacity (snake_case)
@@ -392,6 +457,55 @@ server <- function(input, output) {
       } else {
          "Regime: R₀ > 1 → sustained transmission possible 🔥"
       }
+   })
+
+   # Small summary table -----------------------------------------------------
+   output$summaryTable <- renderTable({
+      par <- params()
+      if (is.null(par) || input$m_current <= 0) {
+         return(NULL)
+      }
+
+      m <- input$m_current
+      C_current <- (m * par$a^2 * par$p^par$n) / par$mu
+      R0 <- C_current * par$b * par$c * par$D
+
+      data.frame(
+         Quantity = c(
+            "Daily survival p",
+            "Feeding probability on host h",
+            "Gonotrophic cycle g",
+            "EIP n",
+            "Human biting rate a = h/g",
+            "Duration of infectivity D",
+            "Current vector density m",
+            "Current vectorial capacity C",
+            "Current basic reproduction number R₀"
+         ),
+         Value = c(
+            round(par$p, 3),
+            round(par$h, 3),
+            round(par$g, 2),
+            round(par$n, 1),
+            round(par$a, 3),
+            round(par$D, 1),
+            round(m, 1),
+            signif(C_current, 3),
+            signif(R0, 3)
+         ),
+         Units = c(
+            "probability",
+            "probability",
+            "days",
+            "days",
+            "bites per mosquito per day",
+            "days",
+            "vectors per host",
+            "infectious bites per host per day",
+            "dimensionless"
+         ),
+         stringsAsFactors = FALSE
+      )
    })
 }
 
