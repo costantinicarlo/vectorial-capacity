@@ -178,7 +178,7 @@ ui <- fluidPage(
                ),
                p(strong("Human & Infection Parameters:")),
                tags$ul(
-                  tags$li(strong("D:"), "Duration of gametocytaemia (20-200 days)"),
+                  tags$li(strong("D:"), "Duration of gametocytaemia (0-200 days)"),
                   tags$li(strong("b:"), "Mosquito → human transmission probability"),
                   tags$li(strong("c:"), "Human → mosquito transmission probability")
                ),
@@ -358,8 +358,8 @@ server <- function(input, output, session) {
       if (is.null(par)) {
          return("Choose a daily survival probability strictly between 0 and 1.")
       }
-      if (par$b <= 0 || par$c <= 0) {
-         return("With b = 0 or c = 0 there is no transmission (R₀ = 0), so no finite critical vector density.")
+      if (par$b <= 0 || par$c <= 0 || par$D <= 0) {
+         return("With b = 0, c = 0, or D = 0 there is no transmission (R₀ = 0), so no finite critical vector density.")
       }
       M <- critical_vector_density(par$mu, par$D, par$b, par$c, par$a, par$p, par$n)
       paste("Critical density for R₀ = 1 (blue arrow) =", round(M, 2), "vectors/host")
@@ -373,8 +373,8 @@ server <- function(input, output, session) {
       if (is.null(par)) {
          return("")
       }
-      if (par$b <= 0 || par$c <= 0) {
-         return("Critical human biting rate is undefined when b = 0 or c = 0 (R₀ = 0).")
+      if (par$b <= 0 || par$c <= 0 || par$D <= 0) {
+         return("Critical human biting rate is undefined when b = 0, c = 0, or D = 0 (R₀ = 0).")
       }
       MA <- par$mu / (par$D * par$b * par$c * par$a * par$p^par$n)
       paste(
@@ -413,13 +413,10 @@ server <- function(input, output, session) {
       if (is.null(par)) {
          return()
       }
-
-      # grid of m on log-scale: 0.01–10,000 vectors/host
       m <- 10^seq(-2, 3, length.out = 500)
       C <- (m * par$a^2 * par$p^par$n) / par$mu
 
-      # Threshold C for R0 = 1 and corresponding critical M if b, c > 0.
-      if (par$b > 0 && par$c > 0) {
+      if (par$b > 0 && par$c > 0 && par$D > 0) {
          Ccrit <- 1 / (par$b * par$c * par$D)
          M <- par$mu / (par$D * par$b * par$c * par$a^2 * par$p^par$n)
       } else {
@@ -427,7 +424,6 @@ server <- function(input, output, session) {
          M <- NA
       }
 
-      # y limits for log-scale (avoid zero)
       Cpos <- C[C > 0 & is.finite(C)]
       ymax <- max(Cpos, na.rm = TRUE) * 1.2
       ymin <- min(Cpos, na.rm = TRUE) * 0.8
@@ -438,7 +434,7 @@ server <- function(input, output, session) {
          col  = "darkgray",
          type = "l",
          ylim = ylim,
-         log  = "y", # log-scale for C
+         log  = "y",
          main = "Vectorial Capacity as a function of vector density",
          ylab = "Vectorial Capacity C (per day, log scale)",
          xlab = "No. vectors/host (log10 scale)"
@@ -556,7 +552,6 @@ server <- function(input, output, session) {
       if (is.null(par) || input$m_current <= 0) {
          return(NULL)
       }
-
       m <- input$m_current
       C_current <- (m * par$a^2 * par$p^par$n) / par$mu
       R0 <- C_current * par$b * par$c * par$D
