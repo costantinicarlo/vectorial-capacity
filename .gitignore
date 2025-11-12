@@ -1,4 +1,110 @@
-.Rproj.user
+# R and RStudio files
+.Rproj.user/
 .Rhistory
 .RData
 .Ruserdata
+.Rapp.history
+
+# Session Data files
+.RDataTmp
+
+# User-specific files
+.Renviron
+
+# Example code in package build process
+*-Ex.R
+
+# Output files from R CMD build
+/*.tar.gz
+
+# Output files from R CMD check
+/*.Rcheck/
+
+# OAuth2 token
+.httr-oauth
+
+# knitr and R markdown default cache directories
+*_cache/
+/cache/
+
+# Temporary files created by R markdown
+*.utf8.md
+*.knit.md
+
+# pkgdown site
+docs/
+
+# translation temp files
+po/*~
+
+# RStudio Connect folder - keeping deployment credentials private
+rsconnect/
+
+# macOS files
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Files that might appear in the root of a volume
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Directories potentially created on remote AFP share
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Windows files
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+
+# Linux files
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# Shiny specific
+.shiny_app_cache/
+
+# Application specific
+*_temp.R
+scratch*.R
+
+# Data files (if you add any)
+*.csv
+*.xlsx
+*.rds
+*.RDS
+
+# Plots and output
+plots/
+figures/
+output/
+*.png
+*.jpg
+*.pdf
+# Except the decorative image
+!www/Anopheles.jpg
+
+# Package management
+renv/
+renv.lock
+packrat/
+
+# Log files
+*.log
