@@ -115,18 +115,20 @@ ui <- fluidPage(
          hr(),
          h4("Presets"),
          fluidRow(
-            column(6, actionButton("preset_baseline", "Baseline high transmission")),
-            column(6, actionButton("preset_llin", "LLINs"))
-         ),
-         fluidRow(
-            column(6, actionButton("preset_irs", "IRS")),
-            column(6, actionButton("preset_immunity", "Partial immunity"))
-         ),
-         fluidRow(
-            column(12, actionButton(
-               "preset_suppression",
-               "Genetic / larval suppression"
-            ))
+            column(
+               width = 6,
+               actionButton("preset_baseline", "Baseline high transmission", width = "100%"),
+               br(),
+               actionButton("preset_suppression", "Genetic / larval suppression", width = "100%"),
+               br(),
+               actionButton("preset_immunity", "Partial immunity", width = "100%")
+            ),
+            column(
+               width = 6,
+               actionButton("preset_irs", "IRS", width = "100%"),
+               br(),
+               actionButton("preset_llin", "LLINs", width = "100%")
+            )
          )
       ),
 
@@ -489,6 +491,7 @@ server <- function(input, output, session) {
       par(bty = "n", las = 1)
       plot(t, S,
          type = "n",
+         ylim = c(0, 1),
          main = "Survivorship",
          xlab = "No. days after emergence (t)",
          ylab = "Proportion surviving after t days"
