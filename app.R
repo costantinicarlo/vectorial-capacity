@@ -81,7 +81,7 @@ ui <- fluidPage(
          # D: duration of human infectiousness (gametocytaemia) in days; affects R0 linearly.
          sliderInput("D",
             "Duration of infective gametocytaemia (days, D)",
-            min   = 20,
+            min   = 0,
             max   = 200,
             value = 80,
             step  = 5
@@ -202,9 +202,9 @@ server <- function(input, output, session) {
    # 1) High transmission baseline (An. gambiae-ish)
    observeEvent(input$preset_baseline, {
       updateSliderInput(session, "p", value = 0.90)
-      updateSliderInput(session, "h", value = 0.50)
+      updateSliderInput(session, "h", value = 0.90)
       updateSliderInput(session, "g", value = 2.5)
-      updateSliderInput(session, "n", value = 12)
+      updateSliderInput(session, "n", value = 10)
       updateSliderInput(session, "D", value = 80)
       updateSliderInput(session, "b", value = 0.30)
       updateSliderInput(session, "c", value = 0.50)
@@ -216,32 +216,32 @@ server <- function(input, output, session) {
       updateSliderInput(session, "p", value = 0.85)
       updateSliderInput(session, "h", value = 0.25)
       updateSliderInput(session, "g", value = 2.5)
-      updateSliderInput(session, "n", value = 12)
+      updateSliderInput(session, "n", value = 10)
       updateSliderInput(session, "D", value = 80)
       updateSliderInput(session, "b", value = 0.30)
       updateSliderInput(session, "c", value = 0.50)
-      updateSliderInput(session, "m_current", value = 30)
+      updateSliderInput(session, "m_current", value = 25)
    })
 
    # 3) IRS (strong reduction in survival)
    observeEvent(input$preset_irs, {
       updateSliderInput(session, "p", value = 0.75)
-      updateSliderInput(session, "h", value = 0.40)
+      updateSliderInput(session, "h", value = 0.90)
       updateSliderInput(session, "g", value = 2.5)
-      updateSliderInput(session, "n", value = 12)
+      updateSliderInput(session, "n", value = 10)
       updateSliderInput(session, "D", value = 80)
       updateSliderInput(session, "b", value = 0.30)
       updateSliderInput(session, "c", value = 0.50)
-      updateSliderInput(session, "m_current", value = 30)
+      updateSliderInput(session, "m_current", value = 25)
    })
 
    # 4) Partial immunity (shorter infectious period + slightly lower b, c)
    observeEvent(input$preset_immunity, {
       updateSliderInput(session, "p", value = 0.90)
-      updateSliderInput(session, "h", value = 0.50)
+      updateSliderInput(session, "h", value = 0.90)
       updateSliderInput(session, "g", value = 2.5)
-      updateSliderInput(session, "n", value = 12)
-      updateSliderInput(session, "D", value = 40)
+      updateSliderInput(session, "n", value = 10)
+      updateSliderInput(session, "D", value = 20)
       updateSliderInput(session, "b", value = 0.20)
       updateSliderInput(session, "c", value = 0.40)
       updateSliderInput(session, "m_current", value = 50)
@@ -250,9 +250,9 @@ server <- function(input, output, session) {
    # 5) Genetic / larval suppression (strong reduction in m)
    observeEvent(input$preset_suppression, {
       updateSliderInput(session, "p", value = 0.90)
-      updateSliderInput(session, "h", value = 0.50)
+      updateSliderInput(session, "h", value = 0.90)
       updateSliderInput(session, "g", value = 2.5)
-      updateSliderInput(session, "n", value = 12)
+      updateSliderInput(session, "n", value = 10)
       updateSliderInput(session, "D", value = 80)
       updateSliderInput(session, "b", value = 0.30)
       updateSliderInput(session, "c", value = 0.50)
@@ -324,7 +324,7 @@ server <- function(input, output, session) {
       }
 
       # grid of m on log-scale: 0.01–10,000 vectors/host
-      m <- 10^seq(-2, 4, length.out = 500)
+      m <- 10^seq(-2, 3, length.out = 500)
       C <- (m * par$a^2 * par$p^par$n) / par$mu
 
       # Threshold C for R0 = 1 and corresponding critical M if b, c > 0.
