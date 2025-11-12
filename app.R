@@ -203,7 +203,6 @@ ui <- fluidPage(
             tabPanel(
                "Vectorial Capacity & R₀",
                br(),
-               # Decorative image
                img(src = "Anopheles.jpg", width = 50),
                h3("Definition of vectorial capacity"),
                div("The vectorial capacity of a malaria vector population is defined as the average number of inoculations
@@ -218,19 +217,24 @@ ui <- fluidPage(
                  i.e. when C = 1/(b × c × D). For non-immune persons infected with P. falciparum,
                  D is often taken to be about 80 days."),
                em("---Macdonald, G. (1955) Proc. Roy. Soc. Med. 48:295-301."),
-               # Plot: C as a function of m. Shows threshold horizontal line for R0=1 and critical m.
-               plotOutput("CPlot"),
-               # Text outputs for critical density m at R0=1, critical ma, and expectation of infective life.
-               p(textOutput("criticalM")),
-               p(textOutput("criticalMA")),
-               p(textOutput("e")),
-               br(),
-               h3("Current C and R₀ for the chosen m"),
-               # Point estimates at m_current
-               p(textOutput("C_current")),
-               p(textOutput("R0_current")),
-               p(textOutput("R0_regime")),
-               tableOutput("summaryTable")
+               # Side-by-side layout for plot (left) and summary table (right)
+               fluidRow(
+                  column(
+                     width = 7,
+                     plotOutput("CPlot", height = "450px"),
+                     p(textOutput("criticalM")),
+                     p(textOutput("criticalMA")),
+                     p(textOutput("e"))
+                  ),
+                  column(
+                     width = 5,
+                     h4("Current C, R₀ and parameters"),
+                     p(textOutput("C_current")),
+                     p(textOutput("R0_current")),
+                     p(textOutput("R0_regime")),
+                     tableOutput("summaryTable")
+                  )
+               )
             ),
 
             # Tab 3: Survivorship
