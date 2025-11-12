@@ -130,40 +130,131 @@ ui <- fluidPage(
          )
       ),
 
-      # Main panel
+      # Main panel with tabs
       mainPanel(
-         # Decorative image
-         img(src = "Anopheles.jpg", width = 50),
-         h3("Definition of vectorial capacity"),
-         div("The vectorial capacity of a malaria vector population is defined as the average number of inoculations
-           with a specified (Plasmodium) parasite, originating from one case of malaria in unit time,
-           that the population would distribute to humans if all the vectors biting the case became infected."),
-         em("---Garrett-Jones, C. & Grab, B. (1964) Bull. Wld. Hlth. Org. 31:71-86."),
-         br(),
-         h3("Critical threshold and basic reproduction number R₀"),
-         div("In the Macdonald framework, the basic reproduction number satisfies
-           R₀ = C × b × c × D, where C is the vectorial capacity and D is the duration
-           of infective gametocytaemia. Endemic transmission disappears when R₀ = 1,
-           i.e. when C = 1/(b × c × D). For non-immune persons infected with P. falciparum,
-           D is often taken to be about 80 days."),
-         em("---Macdonald, G. (1955) Proc. Roy. Soc. Med. 48:295-301."),
-         # Plot: C as a function of m. Shows threshold horizontal line for R0=1 and critical m.
-         plotOutput("CPlot"),
-         # Text outputs for critical density m at R0=1, critical ma, and expectation of infective life.
-         p(textOutput("criticalM")),
-         p(textOutput("criticalMA")),
-         p(textOutput("e")),
-         br(),
-         h3("Current C and R₀ for the chosen m"),
-         # Point estimates at m_current
-         p(textOutput("C_current")),
-         p(textOutput("R0_current")),
-         p(textOutput("R0_regime")),
-         tableOutput("summaryTable"),
-         br(),
-         # Survivorship curve under exponential mortality (S(t) = p^t).
-         plotOutput("Survivorship"),
-         p(textOutput("life_expect"))
+         tabsetPanel(
+            type = "tabs",
+
+            # Tab 1: Instructions (README content)
+            tabPanel(
+               "Instructions",
+               br(),
+               h3("Overview"),
+               p("This educational tool allows you to explore the Macdonald-Garrett-Jones framework of malaria transmission dynamics,
+                 focusing on vectorial capacity and the basic reproduction number (R₀)."),
+               h3("Biological & Mathematical Background"),
+               h4("Vectorial Capacity (C)"),
+               p("The vectorial capacity represents the daily rate at which future inoculations arise from a single infectious case:"),
+               withMathJax("$$C = \\frac{ma^2p^n}{\\mu}$$"),
+               tags$ul(
+                  tags$li(strong("m:"), "vector density (vectors per host)"),
+                  tags$li(strong("a:"), "human biting rate per vector per day"),
+                  tags$li(strong("p:"), "daily probability of vector survival"),
+                  tags$li(strong("n:"), "extrinsic incubation period (EIP) – days for parasite to develop in mosquito"),
+                  tags$li(strong("μ:"), "per-day mortality rate = -ln(p)")
+               ),
+               h4("Basic Reproduction Number (R₀)"),
+               p("R₀ represents the expected number of secondary infections arising from one primary infection:"),
+               withMathJax("$$R_0 = C \\times b \\times c \\times D$$"),
+               tags$ul(
+                  tags$li(strong("b:"), "probability that a bite by an infectious mosquito infects a human"),
+                  tags$li(strong("c:"), "probability that a bite on an infectious human infects a mosquito"),
+                  tags$li(strong("D:"), "duration of human infectiousness (gametocytaemia) in days")
+               ),
+               h4("Threshold Principle"),
+               tags$ul(
+                  tags$li(strong("R₀ < 1:"), "Transmission cannot be sustained (each case produces <1 secondary case)"),
+                  tags$li(strong("R₀ = 1:"), "Threshold – transmission at equilibrium"),
+                  tags$li(strong("R₀ > 1:"), "Transmission can be sustained (epidemic potential)")
+               ),
+               h3("Using the App"),
+               h4("Parameters"),
+               p(strong("Vector & Parasite Parameters:")),
+               tags$ul(
+                  tags$li(strong("p:"), "Daily survival probability – small changes have large effects"),
+                  tags$li(strong("h:"), "Probability of feeding on humans per cycle"),
+                  tags$li(strong("g:"), "Gonotrophic cycle length (1-6 days)"),
+                  tags$li(strong("n:"), "Extrinsic incubation period (8-50 days)")
+               ),
+               p(strong("Human & Infection Parameters:")),
+               tags$ul(
+                  tags$li(strong("D:"), "Duration of gametocytaemia (20-200 days)"),
+                  tags$li(strong("b:"), "Mosquito → human transmission probability"),
+                  tags$li(strong("c:"), "Human → mosquito transmission probability")
+               ),
+               h4("Preset Scenarios"),
+               p("Five intervention scenarios based on real-world malaria control strategies:"),
+               tags$ol(
+                  tags$li(strong("Baseline High Transmission:"), "Representative of holoendemic areas with Anopheles gambiae"),
+                  tags$li(strong("LLINs:"), "Long-Lasting Insecticidal Nets – reduced host contact + modest mortality"),
+                  tags$li(strong("IRS:"), "Indoor Residual Spraying – strong mortality increase"),
+                  tags$li(strong("Partial Immunity:"), "Shorter infectious period + reduced transmission efficiency"),
+                  tags$li(strong("Genetic/Larval Suppression:"), "Dramatic reduction in vector density")
+               ),
+               h3("References"),
+               tags$ol(
+                  tags$li("Garrett-Jones, C. & Grab, B. (1964). Bull. Wld. Hlth. Org. 31:71-86."),
+                  tags$li("Macdonald, G. (1955). Proc. Roy. Soc. Med. 48:295-301."),
+                  tags$li("Smith, D.L., et al. (2012). PLoS Pathogens, 8(4):e1002588.")
+               )
+            ),
+
+            # Tab 2: Main Analysis (vectorial capacity plot and metrics)
+            tabPanel(
+               "Vectorial Capacity & R₀",
+               br(),
+               # Decorative image
+               img(src = "Anopheles.jpg", width = 50),
+               h3("Definition of vectorial capacity"),
+               div("The vectorial capacity of a malaria vector population is defined as the average number of inoculations
+                 with a specified (Plasmodium) parasite, originating from one case of malaria in unit time,
+                 that the population would distribute to humans if all the vectors biting the case became infected."),
+               em("---Garrett-Jones, C. & Grab, B. (1964) Bull. Wld. Hlth. Org. 31:71-86."),
+               br(),
+               h3("Critical threshold and basic reproduction number R₀"),
+               div("In the Macdonald framework, the basic reproduction number satisfies
+                 R₀ = C × b × c × D, where C is the vectorial capacity and D is the duration
+                 of infective gametocytaemia. Endemic transmission disappears when R₀ = 1,
+                 i.e. when C = 1/(b × c × D). For non-immune persons infected with P. falciparum,
+                 D is often taken to be about 80 days."),
+               em("---Macdonald, G. (1955) Proc. Roy. Soc. Med. 48:295-301."),
+               # Plot: C as a function of m. Shows threshold horizontal line for R0=1 and critical m.
+               plotOutput("CPlot"),
+               # Text outputs for critical density m at R0=1, critical ma, and expectation of infective life.
+               p(textOutput("criticalM")),
+               p(textOutput("criticalMA")),
+               p(textOutput("e")),
+               br(),
+               h3("Current C and R₀ for the chosen m"),
+               # Point estimates at m_current
+               p(textOutput("C_current")),
+               p(textOutput("R0_current")),
+               p(textOutput("R0_regime")),
+               tableOutput("summaryTable")
+            ),
+
+            # Tab 3: Survivorship
+            tabPanel(
+               "Survivorship",
+               br(),
+               h3("Vector Survivorship Under Exponential Mortality"),
+               p("This plot shows the probability that a vector survives t days after emergence,
+                 assuming a constant daily survival probability p and exponential mortality model."),
+               p("The survivorship function is S(t) = p^t, where p is the daily survival probability."),
+               # Survivorship curve under exponential mortality (S(t) = p^t).
+               plotOutput("Survivorship"),
+               p(textOutput("life_expect")),
+               br(),
+               h4("Interpretation"),
+               p("Under the exponential mortality model:"),
+               tags$ul(
+                  tags$li("The mortality rate (μ = -ln(p)) is constant over time"),
+                  tags$li("There is no senescence – vectors do not 'age'"),
+                  tags$li("The probability of dying is the same each day regardless of current age"),
+                  tags$li("This is a simplification: real mosquito populations show age-dependent mortality")
+               )
+            )
+         )
       )
    )
 )
