@@ -141,6 +141,7 @@ ui <- fluidPage(
             tabPanel(
                "Instructions",
                br(),
+               img(src = "Anopheles.jpg", width = 50),
                h3("Overview"),
                p("This educational tool allows you to explore the Macdonald-Garrett-Jones framework of malaria transmission dynamics,
                  focusing on vectorial capacity and the basic reproduction number (R₀)."),
@@ -243,6 +244,7 @@ ui <- fluidPage(
             tabPanel(
                "Survivorship",
                br(),
+               img(src = "Anopheles.jpg", width = 50),
                h3("Vector Survivorship Under Exponential Mortality"),
                p("This plot shows the probability that a vector survives t days after emergence,
                  assuming a constant daily survival probability p and exponential mortality model."),
