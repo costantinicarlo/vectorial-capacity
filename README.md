@@ -1,6 +1,6 @@
-# Vectorial Capacity & R₀ Explorer
+# Vectorial Capacity & $R_0$ Explorer
 
-An interactive Shiny application for exploring the Macdonald-Garrett-Jones framework of malaria transmission dynamics, focusing on vectorial capacity and the basic reproduction number (R₀).
+An interactive Shiny application for exploring the Macdonald-Garrett-Jones framework of malaria transmission dynamics, focusing on vectorial capacity and the basic reproduction number ($R_0$).
 
 ## Overview
 
@@ -11,7 +11,7 @@ This educational tool allows users to manipulate entomological and epidemiologic
 ### What This App Does
 
 - **Visualizes vectorial capacity** as a function of vector density
-- **Calculates R₀** (basic reproduction number) under different scenarios
+- **Calculates $R_0$** (basic reproduction number) under different scenarios
 - **Identifies critical thresholds** for transmission elimination
 - **Compares intervention strategies** through preset scenarios
 - **Shows vector survivorship** under exponential mortality
@@ -26,7 +26,7 @@ This educational tool allows users to manipulate entomological and epidemiologic
 
 ## Biological & Mathematical Background
 
-### Vectorial Capacity (C)
+### Vectorial Capacity ($C$)
 
 The vectorial capacity represents the **daily rate at which future inoculations arise from a single infectious case**:
 
@@ -34,38 +34,38 @@ $$C = \frac{ma^2p^n}{\mu}$$
 
 Where:
 
-- **m**: vector density (vectors per host)
-- **a**: human biting rate per vector per day (bites/vector/day)
-- **p**: daily probability of vector survival (dimensionless)
-- **n**: extrinsic incubation period (EIP) – days for parasite to develop in mosquito
-- **μ**: per-day mortality rate = -ln(p) (1/day)
+- **$m$**: vector density (vectors per host)
+- **$a$**: human biting rate per vector per day (bites/vector/day)
+- **$p$**: daily probability of vector survival (dimensionless)
+- **$n$**: extrinsic incubation period (EIP) – days for parasite to develop in mosquito
+- **$\mu$**: per-day mortality rate = $-ln(p)$ (1/day)
 
 #### Interpretation
 
-- **m**: How many vectors are available per host
-- **a²**: Two bites required (host → vector, then vector → host)
-- **p^n**: Probability vector survives long enough to become infectious
-- **1/μ**: Expected remaining lifespan once infectious
+- **$m$**: How many vectors are available per host
+- **$a^2$**: Two bites required (host → vector, then vector → host)
+- **$p^n$**: Probability vector survives long enough to become infectious
+- **$1/\mu$**: Expected remaining lifespan once infectious
 
-### Basic Reproduction Number (R₀)
+### Basic Reproduction Number ($R_0$)
 
-R₀ represents the **expected number of secondary infections arising from one primary infection** in a completely susceptible population:
+$R_0$ represents the **expected number of secondary infections arising from one primary infection** in a completely susceptible population:
 
 $$R_0 = C \times b \times c \times D$$
 
 Where:
 
-- **b**: probability that a bite by an infectious mosquito infects a human
-- **c**: probability that a bite on an infectious human infects a mosquito
-- **D**: duration of human infectiousness (gametocytaemia) in days
+- **$b$**: probability that a bite by an infectious mosquito infects a human
+- **$c$**: probability that a bite on an infectious human infects a mosquito
+- **$D$**: duration of human infectiousness (gametocytaemia) in days
 
 #### Threshold Principle
 
-- **R₀ < 1**: Transmission cannot be sustained (each case produces <1 secondary case)
-- **R₀ = 1**: Threshold – transmission at equilibrium
-- **R₀ > 1**: Transmission can be sustained (epidemic potential)
+- **$R_0 < 1$**: Transmission cannot be sustained (each case produces <1 secondary case)
+- **$R_0 = 1$**: Threshold – transmission at equilibrium
+- **$R_0 > 1$**: Transmission can be sustained (epidemic potential)
 
-### Human Biting Rate (a)
+### Human Biting Rate ($a$)
 
 The daily human biting rate is derived from:
 
@@ -73,8 +73,8 @@ $$a = \frac{h}{g}$$
 
 Where:
 
-- **h**: probability of feeding on host per gonotrophic cycle
-- **g**: duration of gonotrophic cycle (days)
+- **$h$**: probability of feeding on host per gonotrophic cycle
+- **$g$**: duration of gonotrophic cycle (days)
 
 **Caveat**: This assumes all blood meals are successful and no more than one blood meal per cycle.
 
@@ -82,26 +82,29 @@ Where:
 
 The model assumes **exponential mortality** with constant hazard rate:
 
-- **Survival function**: S(t) = p^t
-- **Mortality rate**: μ = -ln(p)
-- **Life expectancy at emergence**: E[T] = 1/μ days
-- **Expected infective life**: E_inf = p^n/μ days (conditional on surviving EIP)
+- **Survival function**: $S(t) = p^t$
+- **Mortality rate**: $\mu = -ln(p)$
+- **Life expectancy at emergence**: $E[T] = 1/\mu$ days
+- **Expected infectious life per mosquito at emergence**: $E_{inf} = p^n/\mu$ days
+- **Conditional remaining life after surviving the EIP**: $1/\mu$ days
 
 ## Installation & Usage
 
 ### Requirements
 
 ```r
-install.packages("shiny")
+install.packages(c("shiny", "testthat"))
 ```
 
 ### Running the App
+
+Run the application from its directory so Shiny can resolve `www/` assets consistently.
 
 **Option 1: From R/RStudio**
 
 ```r
 library(shiny)
-runApp("path/to/app.R")
+runApp("path/to/Vectorial-Capacity")
 ```
 
 **Option 2: Directly from file**
@@ -118,24 +121,24 @@ Visit the deployed app at: <https://carlo-costantini.shinyapps.io/Vectorial_Capa
 
 #### Vector & Parasite Parameters
 
-- **p** (0.5–0.99): Daily survival probability – small changes have large effects
-- **h** (0–1): Probability of feeding on humans per cycle
-- **g** (1–6 days): Gonotrophic cycle length
-- **n** (8–50 days): Extrinsic incubation period (EIP)
+- **$p$** (0.5–0.99): Daily survival probability – small changes have large effects
+- **$h$** (0–1): Probability of feeding on humans per cycle
+- **$g$** (1–6 days): Gonotrophic cycle length
+- **$n$** (8–50 days): Extrinsic incubation period (EIP)
 
 #### Human & Infection Parameters
 
-- **D** (20–200 days): Duration of gametocytaemia
-- **b** (0–1): Mosquito → human transmission probability
-- **c** (0–1): Human → mosquito transmission probability
+- **$D$** (0–200 days): Duration of gametocytaemia
+- **$b$** (0–1): Mosquito → human transmission probability
+- **$c$** (0–1): Human → mosquito transmission probability
 
 #### Current Scenario
 
-- **m** (0–200): Current vector density (vectors/host)
+- **$m$** (0–200): Current vector density (vectors/host)
 
 ### Preset Scenarios
 
-The app includes five intervention scenarios based on real-world malaria control strategies:
+The app includes five illustrative scenarios motivated by common malaria-control strategies. Their parameter values are teaching examples, not empirical intervention-effect estimates:
 
 1. **Baseline High Transmission**: Representative of holoendemic areas with *Anopheles gambiae*
 2. **LLINs** (Long-Lasting Insecticidal Nets): Reduced host contact + modest mortality
@@ -147,16 +150,16 @@ The app includes five intervention scenarios based on real-world malaria control
 
 #### Plots
 
-- **Vectorial Capacity vs. Vector Density**: Shows C(m) on log scales with R₀=1 threshold
-- **Survivorship Curve**: Shows S(t) = p^t for first 30 days
+- **Vectorial Capacity _vs._ Vector Density**: Shows $C(m)$ on log scales with $R_0=1$ threshold
+- **Survivorship Curve**: Shows $S(t) = p^t$ for first 30 days
 
 #### Key Metrics
 
-- **Critical vector density** for R₀ = 1
-- **Critical human biting rate** for R₀ = 1
-- **Expected infective life** (days)
+- **Critical vector density** for $R_0 = 1$
+- **Critical human biting rate** for $R_0 = 1$
+- **Expected infectious life per mosquito at emergence** (days)
 - **Expected lifespan at emergence** (days)
-- **Current C and R₀** for chosen parameters
+- **Current $C$ and $R_0$** for chosen parameters
 - **Transmission regime** classification
 
 #### Summary Table
@@ -167,19 +170,20 @@ Displays all parameters and calculated values with units
 
 ### Sensitivity Insights
 
-Parameters do **not** contribute equally to C or R₀:
+Parameters do **not** contribute equally to $C$ or $R_0$:
 
-- **Survival (p)** has exponential effects via p^n and μ = -ln(p)
-- **Biting rate (a)** has quadratic effects via a²
-- **Vector density (m)** has linear effects
-- **Duration parameters** (D, n) have linear effects
+- **Survival ($p$)** has exponential effects via $p^n$ and $\mu = -ln(p)$
+- **Biting rate ($a$)** has quadratic effects via $a²$
+- **Vector density ($m$)** has linear effects
+- **Human infectious duration ($D$)** has a linear effect
+- **EIP ($n$)** has a nonlinear effect through $p^n$
 
 ### Policy Implications
 
-1. **IRS can be more effective than LLINs** when survival is highly sensitive to insecticide exposure
-2. **Multiple interventions** may be needed when baseline R₀ >> 1
-3. **Vector density reduction** has diminishing returns (linear effect)
-4. **Behavior change** affecting biting rate (a) is highly impactful (quadratic effect)
+1. **Adult mortality can dominate transmission reductions** when survival is highly sensitive to insecticide exposure
+2. **Multiple interventions** may be needed when baseline $R_0$ >> 1
+3. **Vector density reduction** has a constant proportional effect in this linear model
+4. **Behavior change** affecting biting rate ($a$) is highly impactful (quadratic effect)
 
 ## Caveats & Limitations
 
@@ -198,7 +202,7 @@ Parameters do **not** contribute equally to C or R₀:
 - Ignores unsuccessful feeding attempts
 - No explicit immunity dynamics
 - No superinfection in vectors or hosts
-- No age structure in vector or host populations
+- No vector or host age structure; age-dependent vector mortality is planned for a later release
 
 ## References
 
@@ -220,15 +224,23 @@ Parameters do **not** contribute equally to C or R₀:
 
 ```
 .
-├── app.R                  # Main Shiny application
-├── README.md             # This file
-├── www/
-│   └── Anopheles.jpg     # Decorative image
-├── v2.R                  # Alternative implementation
-├── feeding-cycle.R       # Gonotrophic cycle analysis
-├── TODO.R                # Development notes
-└── rsconnect/            # Deployment configuration
+├── .gitignore                         # Repository exclusions
+├── app.R                              # Shiny application
+├── README.md                          # Documentation
+├── Vectorial-Capacity.Rproj           # RStudio project
+├── tests/testthat/test-main-app.R     # Main-app regression tests
+└── www/Anopheles.jpg                  # Decorative image
 ```
+
+## Testing and Reproducibility
+
+Run the regression suite with:
+
+```r
+testthat::test_dir("tests/testthat")
+```
+
+For reproducible deployments, initialize `renv` and commit the generated `renv.lock`; the lockfile is intentionally not ignored.
 
 ## Contributing
 
@@ -238,10 +250,6 @@ This is an educational tool. Suggestions for improvements, additional preset sce
 
 Educational use freely permitted. Please cite appropriately if used in teaching or research contexts.
 
-## Contact
-
-For questions about malaria transmission biology or the Macdonald-Garrett-Jones framework, please consult the references above or contact vector biology specialists at your institution.
-
 ---
 
-**Acknowledgments**: This app implements classical malaria epidemiology theory developed by Ronald Ross, George Macdonald, Christopher Garrett-Jones, and many others who established the quantitative foundations of vector-borne disease control.
+**Standing on the shoulders of giants**: This app implements classical malaria epidemiology theory developed by Nobel Prize winner Ronald Ross, George Macdonald, Christopher Garrett-Jones, and many others who established the quantitative foundations of vector-borne disease control.

@@ -26,7 +26,7 @@
 #     a = h / g, where h is the probability of feeding on the target host per gonotrophic cycle
 #     and g is the cycle length (days). This yields the per-day human biting rate per vector.
 #     caveat: this assumes all blood meals are successful and no more than one blood meal per cycle.
-#     Expectation of infective life: E_infective = p^n / μ (days).
+#     Expected infectious life per mosquito at emergence: E_infective = p^n / μ (days).
 #     Expectation of lifespan at emergence: 1 / μ (days).
 #
 # This Shiny app lets you explore how entomological parameters (p, h, g, n, m)
@@ -141,7 +141,7 @@ ui <- fluidPage(
             tabPanel(
                "Instructions",
                br(),
-               img(src = "Anopheles.jpg", width = 50),
+               img(src = "Anopheles.jpg", width = 50, alt = "Anopheles mosquito"),
                h3("Overview"),
                p("This educational tool allows you to explore the Macdonald-Garrett-Jones framework of malaria transmission dynamics,
                  focusing on vectorial capacity and the basic reproduction number (R₀)."),
@@ -206,7 +206,7 @@ ui <- fluidPage(
             tabPanel(
                "Vectorial Capacity & R₀",
                br(),
-               img(src = "Anopheles.jpg", width = 50),
+               img(src = "Anopheles.jpg", width = 50, alt = "Anopheles mosquito"),
                h3("Definition of vectorial capacity"),
                div("The vectorial capacity of a malaria vector population is defined as the average number of inoculations
                  with a specified (Plasmodium) parasite, originating from one case of malaria in unit time,
@@ -216,7 +216,7 @@ ui <- fluidPage(
                h3("Critical threshold and basic reproduction number R₀"),
                div("In the Macdonald framework, the basic reproduction number satisfies
                  R₀ = C × b × c × D, where C is the vectorial capacity and D is the duration
-                 of infective gametocytaemia. Endemic transmission disappears when R₀ = 1,
+                 of infective gametocytaemia. The transmission threshold is R₀ = 1; transmission declines when R₀ < 1,
                  i.e. when C = 1/(b × c × D). For non-immune persons infected with P. falciparum,
                  D is often taken to be about 80 days."),
                em("---Macdonald, G. (1955) Proc. Roy. Soc. Med. 48:295-301."),
@@ -244,7 +244,7 @@ ui <- fluidPage(
             tabPanel(
                "Survivorship",
                br(),
-               img(src = "Anopheles.jpg", width = 50),
+               img(src = "Anopheles.jpg", width = 50, alt = "Anopheles mosquito"),
                h3("Vector Survivorship Under Exponential Mortality"),
                p("This plot shows the probability that a vector survives t days after emergence,
                  assuming a constant daily survival probability p and exponential mortality model."),
@@ -366,11 +366,14 @@ server <- function(input, output, session) {
       if (is.null(par)) {
          return("Choose a daily survival probability strictly between 0 and 1.")
       }
+      if (par$a <= 0) {
+         return("With a = 0 there is no human biting and R₀ = 0, so no finite critical vector density exists.")
+      }
       if (par$b <= 0 || par$c <= 0 || par$D <= 0) {
          return("With b = 0, c = 0, or D = 0 there is no transmission (R₀ = 0), so no finite critical vector density.")
       }
       M <- critical_vector_density(par$mu, par$D, par$b, par$c, par$a, par$p, par$n)
-      paste("Critical density for R₀ = 1 (blue arrow) =", round(M, 2), "vectors/host")
+      paste("Critical density for R₀ = 1 =", round(M, 2), "vectors/host")
    })
 
    # Critical human biting rate ma for R0 = 1 (text only)
@@ -380,6 +383,9 @@ server <- function(input, output, session) {
       par <- params()
       if (is.null(par)) {
          return("")
+      }
+      if (par$a <= 0) {
+         return("Critical human biting rate is undefined when a = 0 (R₀ = 0).")
       }
       if (par$b <= 0 || par$c <= 0 || par$D <= 0) {
          return("Critical human biting rate is undefined when b = 0, c = 0, or D = 0 (R₀ = 0).")
@@ -392,15 +398,18 @@ server <- function(input, output, session) {
    })
 
    # Expectation of infective life
-   # Once infectious (after n days), remaining expected life under exponential mortality is 1/μ.
-   # Conditioning on surviving EIP yields E_infective = P(survive n days) * (1/μ) = p^n / μ.
+   # Conditional on surviving the EIP, remaining expected life is 1/μ.
+   # Weighting by survival to the EIP gives p^n/μ per mosquito at emergence.
    output$e <- renderText({
       par <- params()
       if (is.null(par)) {
          return("")
       }
       e_inf <- par$p^par$n / par$mu
-      paste("Expectation of infective life =", round(e_inf, 2), "days")
+      paste(
+         "Expected infectious life per mosquito at emergence =",
+         round(e_inf, 2), "days"
+      )
    })
 
    # Expectation of lifespan at emergence (under exponential mortality)
@@ -419,6 +428,13 @@ server <- function(input, output, session) {
    output$CPlot <- renderPlot({
       par <- params()
       if (is.null(par)) {
+         return()
+      }
+      if (par$a <= 0) {
+         par(bty = "n")
+         plot.new()
+         title(main = "Vectorial Capacity as a function of vector density")
+         text(0.5, 0.5, "C = 0 because the human biting rate is zero")
          return()
       }
       m <- 10^seq(-2, 3, length.out = 500)
@@ -459,7 +475,10 @@ server <- function(input, output, session) {
          )
 
          # arrow for critical M where C crosses the threshold
-         if (is.finite(M) && M > 0) {
+         if (
+            is.finite(M) && M >= min(m) && M <= max(m) &&
+               Ccrit >= ymin && Ccrit <= ymax
+         ) {
             arrows(
                x0 = log10(M), y0 = Ccrit,
                x1 = log10(M), y1 = ylim[1],
@@ -504,7 +523,7 @@ server <- function(input, output, session) {
    # Reactive expression for current vectorial capacity (snake_case)
    c_current <- reactive({
       par <- params()
-      if (is.null(par) || input$m_current <= 0) {
+      if (is.null(par)) {
          return(NA)
       }
       (input$m_current * par$a^2 * par$p^par$n) / par$mu
@@ -514,7 +533,7 @@ server <- function(input, output, session) {
    output$C_current <- renderText({
       value <- c_current()
       if (is.na(value)) {
-         return("Set current vector density m > 0 to compute C and R₀.")
+         return("Choose valid parameters to compute C and R₀.")
       }
       paste(
          "Current vectorial capacity C =",
@@ -534,9 +553,6 @@ server <- function(input, output, session) {
       paste("Current basic reproduction number R₀ =", round(R0, 2))
    })
 
-   # Define threshold for borderline R₀ regime (epidemiological rationale: values slightly above 1 may still be unstable)
-   R0_THRESHOLD_UPPER <- 1.2
-
    output$R0_regime <- renderText({
       par <- params()
       value <- c_current()
@@ -546,10 +562,12 @@ server <- function(input, output, session) {
       R0 <- value * par$b * par$c * par$D
 
       # Simple qualitative classification around the threshold R0=1
-      if (R0 < 1) {
+      if (R0 <= 0) {
+         "Regime: R₀ = 0 → no transmission under the selected parameters 🛡️"
+      } else if (R0 < 1) {
          "Regime: R₀ < 1 → transmission cannot be sustained ❄️"
-      } else if (R0 <= R0_THRESHOLD_UPPER) {
-         "Regime: R₀ ≈ 1 → threshold / borderline ⚖️"
+      } else if (abs(R0 - 1) < 1e-8) {
+         "Regime: R₀ = 1 → transmission threshold ⚖️"
       } else {
          "Regime: R₀ > 1 → sustained transmission possible 🔥"
       }
@@ -558,7 +576,7 @@ server <- function(input, output, session) {
    # Small summary table -----------------------------------------------------
    output$summaryTable <- renderTable({
       par <- params()
-      if (is.null(par) || input$m_current <= 0) {
+      if (is.null(par)) {
          return(NULL)
       }
       m <- input$m_current
