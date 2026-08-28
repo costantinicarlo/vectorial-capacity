@@ -101,7 +101,7 @@ output/
 # Except the decorative image
 !www/Anopheles.jpg
 
-# Package management (track renv.lock and renv/activate.R)
+# Local package-management state
 renv/library/
 renv/staging/
 renv/python/
@@ -110,6 +110,6 @@ packrat/
 # Log files
 *.log
 
-# VS code files
+# VS Code files
 *.code-workspace
 .vscode/
