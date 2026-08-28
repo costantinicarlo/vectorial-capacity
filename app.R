@@ -1,265 +1,256 @@
 #
-# Vectorial capacity & R0 – Garrett-Jones / Macdonald playground
+# Vectorial capacity & reproduction-number explorer
 #
-# Biological background (Macdonald, Garrett-Jones):
-# - Vectorial capacity (C) summarizes the per-capita daily potential for transmission by the vector population:
-#     C = m * a^2 * p^n / μ # nolint: commented_code_linter.
-#   where:
-#     m  = number of vectors per host (vectors/host),
-#     a  = human biting rate per vector per day (bites/vector/day),
-#     p  = daily probability of vector survival (dimensionless),
-#     n  = duration of the parasite extrinsic incubation period (days),
-#     μ  = per-day mortality rate of vectors = -ln(p) (1/day).
-#   Interpretation: m counts how many vectors are available; a^2 captures two bites needed
-#   for transmission (host infecting the vector and then vector infecting the host); p^n is the probability a vector
-#   survives the incubation; 1/μ is expected remaining life once infectious.
+# Classical Garrett-Jones / Ross-Macdonald framework:
+#   C = m * a^2 * p^n / mu
+#   R = C * b * c * D
 #
-# - Basic reproduction number:
-#     R0 = C * b * c * D # nolint
-#   where:
-#     b = probability that a bite by an infectious mosquito infects a human,
-#     c = probability that a bite on an infectious human infects a mosquito,
-#     D = duration of human infectiousness (gametocytaemia) in days.
-#   Threshold: transmission cannot persist when R0 < 1, and is sustained when R0 > 1.
+# Here:
+#   m  = adult mosquito density (mosquitoes per human)
+#   a  = human blood-feeding rate per mosquito per day
+#   p  = daily mosquito survival probability
+#   n  = parasite extrinsic incubation period (days)
+#   mu = constant mortality hazard = -ln(p) per day
+#   b  = probability an infectious mosquito bite infects a susceptible human
+#   c  = probability a mosquito becomes infected after biting an infectious human
+#   D  = effective duration of human infectiousness to mosquitoes (days)
 #
-# - Derived quantities:
-#     a = h / g, where h is the probability of feeding on the target host per gonotrophic cycle
-#     and g is the cycle length (days). This yields the per-day human biting rate per vector.
-#     caveat: this assumes all blood meals are successful and no more than one blood meal per cycle.
-#     Expected infectious life per mosquito at emergence: E_infective = p^n / μ (days).
-#     Expectation of lifespan at emergence: 1 / μ (days).
-#
-# This Shiny app lets you explore how entomological parameters (p, h, g, n, m)
-# and human/parasite parameters (b, c, D) shape C and R0, the threshold for R0=1,
-# and survivorship under an exponential mortality model.
+# The human biting rate (HBR) is m * a, not a itself.
+# The generic symbol R is used because intervention and immunity-inspired presets
+# are not all valid interpretations of the basic reproduction number R0.
 #
 
 library(shiny)
 
 ui <- fluidPage(
-   # Application title
-   titlePanel("Vectorial Capacity & R0"),
+   titlePanel("Vectorial Capacity & Reproduction Number Explorer"),
 
-   # Sidebar with sliders
    sidebarLayout(
       sidebarPanel(
          h4("Vector & parasite parameters"),
-         # p: daily survival probability (0–1). Small changes can have large effects (via p^n and μ = -ln p).
-         sliderInput("p",
-            "Daily probability of survival (p)",
-            min   = 0.5,
-            max   = 0.99,
+         sliderInput(
+            "p",
+            "Daily mosquito survival probability (p)",
+            min = 0.5,
+            max = 0.99,
             value = 0.8,
-            step  = 0.01
+            step = 0.01
          ),
-         # h: probability that a blood meal is on the focal host (e.g., human) per gonotrophic cycle.
-         sliderInput("h",
-            "Probability of feeding on host per gonotrophic cycle (h)",
-            min   = 0,
-            max   = 1,
+         sliderInput(
+            "h",
+            "Effective probability of a human blood meal per gonotrophic cycle (h)",
+            min = 0,
+            max = 1,
             value = 0.5,
-            step  = 0.05
+            step = 0.05
          ),
-         # g: length of the gonotrophic cycle in days. a = h/g, so shorter cycles increase daily biting.
-         sliderInput("g",
-            "Duration of gonotrophic cycle (days, g)",
-            min   = 1,
-            max   = 6,
+         sliderInput(
+            "g",
+            "Gonotrophic-cycle duration (days, g)",
+            min = 1,
+            max = 6,
             value = 2.5,
-            step  = 0.5
+            step = 0.5
          ),
-         # n: extrinsic incubation period (EIP) in days. p^n is the survival to infectiousness.
-         sliderInput("n",
-            "Duration of parasite extrinsic incubation period (days, n)",
-            min   = 8,
-            max   = 50,
+         sliderInput(
+            "n",
+            "Parasite extrinsic incubation period (days, n)",
+            min = 8,
+            max = 50,
             value = 12,
-            step  = 1
+            step = 1
          ),
          hr(),
          h4("Human & infection parameters"),
-         # D: duration of human infectiousness (gametocytaemia) in days; affects R0 linearly.
-         sliderInput("D",
-            "Duration of infective gametocytaemia (days, D)",
-            min   = 0,
-            max   = 200,
+         sliderInput(
+            "D",
+            "Effective duration of human infectiousness to mosquitoes (days, D)",
+            min = 0,
+            max = 200,
             value = 80,
-            step  = 5
+            step = 5
          ),
-         # b: infection probability mosquito -> human per infectious bite.
-         sliderInput("b",
+         sliderInput(
+            "b",
             "Prob. mosquito → human infection per infectious bite (b)",
-            min   = 0,
-            max   = 1,
+            min = 0,
+            max = 1,
             value = 0.3,
-            step  = 0.05
+            step = 0.05
          ),
-         # c: infection probability human -> mosquito per bite.
-         sliderInput("c",
+         sliderInput(
+            "c",
             "Prob. human → mosquito infection per bite (c)",
-            min   = 0,
-            max   = 1,
+            min = 0,
+            max = 1,
             value = 0.5,
-            step  = 0.05
+            step = 0.05
          ),
          hr(),
          h4("Current scenario"),
-         # m_current: current vector density (vectors per host) for point estimates of C and R0.
-         sliderInput("m_current",
-            "Current vector density (m, vectors/host)",
-            min   = 0,
-            max   = 200,
+         sliderInput(
+            "m_current",
+            "Current adult mosquito density (m, mosquitoes/human)",
+            min = 0,
+            max = 200,
             value = 10,
-            step  = 1
+            step = 1
          ),
          hr(),
-         h4("Presets"),
+         h4("Illustrative presets"),
+         p(
+            small(
+               "Teaching examples only: parameter values are not empirical intervention-effect estimates."
+            )
+         ),
          fluidRow(
             column(
                width = 6,
-               actionButton("preset_baseline", "Baseline high transmission", width = "100%"),
+               actionButton(
+                  "preset_baseline",
+                  "Illustrative high transmission",
+                  width = "100%"
+               ),
                br(),
-               actionButton("preset_suppression", "Genetic / larval suppression", width = "100%"),
+               actionButton(
+                  "preset_suppression",
+                  "Vector-density suppression",
+                  width = "100%"
+               ),
                br(),
-               actionButton("preset_immunity", "Partial immunity", width = "100%")
+               actionButton(
+                  "preset_immunity",
+                  "Host-immunity-inspired",
+                  width = "100%"
+               )
             ),
             column(
                width = 6,
-               actionButton("preset_irs", "IRS", width = "100%"),
+               actionButton("preset_irs", "IRS-inspired", width = "100%"),
                br(),
-               actionButton("preset_llin", "LLINs", width = "100%")
+               actionButton("preset_llin", "LLIN-inspired", width = "100%")
             )
          )
       ),
 
-      # Main panel with tabs
       mainPanel(
          tabsetPanel(
             type = "tabs",
 
-            # Tab 1: Instructions (README content)
             tabPanel(
                "Instructions",
                br(),
                img(src = "Anopheles.jpg", width = 50, alt = "Anopheles mosquito"),
                h3("Overview"),
-               p("This educational tool allows you to explore the Macdonald-Garrett-Jones framework of malaria transmission dynamics,
-                 focusing on vectorial capacity and the basic reproduction number (R₀)."),
-               h3("Biological & Mathematical Background"),
-               h4("Vectorial Capacity (C)"),
-               p("The vectorial capacity represents the daily rate at which future inoculations arise from a single infectious case:"),
+               p(
+                  "This educational explorer implements a deliberately classical Garrett-Jones / Ross-Macdonald framework for malaria transmission. It is a sensitivity tool, not a fitted transmission model."
+               ),
+               p(
+                  strong("Preset warning: "),
+                  "the five presets are illustrative teaching examples. They are not empirical estimates of LLIN, IRS, immunity, genetic-control, larval-control, or other intervention effects."
+               ),
+               h3("Vectorial capacity"),
+               p(
+                  "The classical vectorial-capacity expression used here is:"
+               ),
                withMathJax("$$C = \\frac{ma^2p^n}{\\mu}$$"),
                tags$ul(
-                  tags$li(strong("m:"), "vector density (vectors per host)"),
-                  tags$li(strong("a:"), "human biting rate per vector per day"),
-                  tags$li(strong("p:"), "daily probability of vector survival"),
-                  tags$li(strong("n:"), "extrinsic incubation period (EIP) – days for parasite to develop in mosquito"),
-                  tags$li(strong("μ:"), "per-day mortality rate = -ln(p)")
+                  tags$li(strong("m:"), "adult mosquito density, mosquitoes per human"),
+                  tags$li(strong("a:"), "human blood-feeding rate per mosquito per day"),
+                  tags$li(strong("p:"), "daily mosquito survival probability"),
+                  tags$li(strong("n:"), "parasite extrinsic incubation period in days"),
+                  tags$li(strong("μ:"), "constant mosquito mortality hazard = -ln(p) per day")
                ),
-               h4("Basic Reproduction Number (R₀)"),
-               p("R₀ represents the expected number of secondary infections arising from one primary infection:"),
-               withMathJax("$$R_0 = C \\times b \\times c \\times D$$"),
+               p(
+                  "Vectorial capacity has units of day⁻¹ and represents transmission potential generated by mosquitoes feeding on a fully infectious human under the model assumptions. It is not the entomological inoculation rate (EIR)."
+               ),
+               h3("Human blood feeding and HBR"),
+               withMathJax("$$a = \\frac{h}{g}, \\qquad \\mathrm{HBR}=ma$$"),
+               p(
+                  "Here a is a per-mosquito human blood-feeding rate. The human biting rate (HBR) is ma, in bites per human per day. The derivation assumes one successful blood meal per gonotrophic cycle and does not represent interrupted or repeated feeding attempts."
+               ),
+               h3("Scenario reproduction number"),
+               withMathJax("$$R = C \\times b \\times c \\times D$$"),
+               p(
+                  "The app uses the generic symbol R. Under an uncontrolled, fully susceptible baseline this corresponds to the classical basic reproduction number R₀. Under control it is more appropriately interpreted as a controlled or scenario reproduction number. The host-immunity-inspired preset is phenomenological and should not be interpreted as a dynamically modelled effective reproduction number."
+               ),
+               h4("Threshold principle"),
                tags$ul(
-                  tags$li(strong("b:"), "probability that a bite by an infectious mosquito infects a human"),
-                  tags$li(strong("c:"), "probability that a bite on an infectious human infects a mosquito"),
-                  tags$li(strong("D:"), "duration of human infectiousness (gametocytaemia) in days")
+                  tags$li(strong("R < 1:"), "infections decline near the disease-free state"),
+                  tags$li(strong("R = 1:"), "critical transmission threshold"),
+                  tags$li(strong("R > 1:"), "sustained transmission is possible under the model assumptions")
                ),
-               h4("Threshold Principle"),
-               tags$ul(
-                  tags$li(strong("R₀ < 1:"), "Transmission cannot be sustained (each case produces <1 secondary case)"),
-                  tags$li(strong("R₀ = 1:"), "Threshold – transmission at equilibrium"),
-                  tags$li(strong("R₀ > 1:"), "Transmission can be sustained (epidemic potential)")
+               p(
+                  "R = 1 is a critical threshold, not a general statement that an endemic system is 'at equilibrium'."
                ),
-               h3("Using the App"),
-               h4("Parameters"),
-               p(strong("Vector & Parasite Parameters:")),
-               tags$ul(
-                  tags$li(strong("p:"), "Daily survival probability – small changes have large effects"),
-                  tags$li(strong("h:"), "Probability of feeding on humans per cycle"),
-                  tags$li(strong("g:"), "Gonotrophic cycle length (1-6 days)"),
-                  tags$li(strong("n:"), "Extrinsic incubation period (8-50 days)")
+               h3("Human infectiousness parameter D"),
+               p(
+                  "D is the effective duration of human infectiousness to mosquitoes. The default value of 80 days is retained as a historical teaching value associated with classical Macdonald-era malaria theory; it is not a universal contemporary estimate. Gametocyte carriage, gametocyte density, and actual mosquito infectivity are distinct quantities."
                ),
-               p(strong("Human & Infection Parameters:")),
-               tags$ul(
-                  tags$li(strong("D:"), "Duration of gametocytaemia (0-200 days)"),
-                  tags$li(strong("b:"), "Mosquito → human transmission probability"),
-                  tags$li(strong("c:"), "Human → mosquito transmission probability")
-               ),
-               h4("Preset Scenarios"),
-               p("Five intervention scenarios based on real-world malaria control strategies:"),
-               tags$ol(
-                  tags$li(strong("Baseline High Transmission:"), "Representative of holoendemic areas with Anopheles gambiae"),
-                  tags$li(strong("LLINs:"), "Long-Lasting Insecticidal Nets – reduced host contact + modest mortality"),
-                  tags$li(strong("IRS:"), "Indoor Residual Spraying – strong mortality increase"),
-                  tags$li(strong("Partial Immunity:"), "Shorter infectious period + reduced transmission efficiency"),
-                  tags$li(strong("Genetic/Larval Suppression:"), "Dramatic reduction in vector density")
+               h3("Vector mortality"),
+               p(
+                  "The app assumes constant exponential mortality: S(t) = p^t and μ = -ln(p). Real mosquito mortality and competence may depend on age; the constant-hazard approximation is retained because it is part of the classical framework explored here."
                ),
                h3("References"),
                tags$ol(
-                  tags$li("Garrett-Jones, C. & Grab, B. (1964). Bull. Wld. Hlth. Org. 31:71-86."),
-                  tags$li("Macdonald, G. (1955). Proc. Roy. Soc. Med. 48:295-301."),
-                  tags$li("Smith, D.L., et al. (2012). PLoS Pathogens, 8(4):e1002588.")
+                  tags$li("Garrett-Jones, C. & Grab, B. (1964). Bull. World Health Organ. 31:71–86."),
+                  tags$li("Macdonald, G. (1955). Proc. R. Soc. Med. 48(4):295–302."),
+                  tags$li("Smith, D.L., et al. (2012). PLoS Pathog. 8(4):e1002588."),
+                  tags$li("Brady, O.J., et al. (2016). Trans. R. Soc. Trop. Med. Hyg. 110(2):107–117.")
                )
             ),
 
-            # Tab 2: Main Analysis (vectorial capacity plot and metrics)
             tabPanel(
-               "Vectorial Capacity & R₀",
+               "Vectorial Capacity & R",
                br(),
                img(src = "Anopheles.jpg", width = 50, alt = "Anopheles mosquito"),
                h3("Definition of vectorial capacity"),
-               div("The vectorial capacity of a malaria vector population is defined as the average number of inoculations
-                 with a specified (Plasmodium) parasite, originating from one case of malaria in unit time,
-                 that the population would distribute to humans if all the vectors biting the case became infected."),
-               em("---Garrett-Jones, C. & Grab, B. (1964) Bull. Wld. Hlth. Org. 31:71-86."),
+               div(
+                  "The vectorial capacity of a malaria vector population is the expected rate of future potentially infectious bites generated by mosquitoes feeding on a fully infectious human, under the classical Garrett-Jones assumptions."
+               ),
+               em("— adapted from Garrett-Jones & Grab (1964), Bull. World Health Organ. 31:71–86."),
                br(),
-               h3("Critical threshold and basic reproduction number R₀"),
-               div("In the Macdonald framework, the basic reproduction number satisfies
-                 R₀ = C × b × c × D, where C is the vectorial capacity and D is the duration
-                 of infective gametocytaemia. The transmission threshold is R₀ = 1; transmission declines when R₀ < 1,
-                 i.e. when C = 1/(b × c × D). For non-immune persons infected with P. falciparum,
-                 D is often taken to be about 80 days."),
-               em("---Macdonald, G. (1955) Proc. Roy. Soc. Med. 48:295-301."),
-               # Side-by-side layout for plot (left) and summary table (right)
+               h3("Critical threshold and scenario reproduction number"),
+               div(
+                  "The explorer calculates R = C × b × c × D. R = 1 is the critical threshold. When parameters describe an uncontrolled, fully susceptible system, this corresponds to the classical R₀. Intervention and immunity-inspired presets should instead be interpreted as controlled or scenario reproduction numbers."
+               ),
                fluidRow(
                   column(
                      width = 7,
                      plotOutput("CPlot", height = "450px"),
                      p(textOutput("criticalM")),
-                     p(textOutput("criticalMA")),
+                     p(textOutput("criticalHBR")),
                      p(textOutput("e"))
                   ),
                   column(
                      width = 5,
-                     h4("Current C, R₀ and parameters"),
+                     h4("Current C, HBR, R and parameters"),
                      p(textOutput("C_current")),
-                     p(textOutput("R0_current")),
-                     p(textOutput("R0_regime")),
+                     p(textOutput("HBR_current")),
+                     p(textOutput("R_current")),
+                     p(textOutput("R_regime")),
                      tableOutput("summaryTable")
                   )
                )
             ),
 
-            # Tab 3: Survivorship
             tabPanel(
                "Survivorship",
                br(),
                img(src = "Anopheles.jpg", width = 50, alt = "Anopheles mosquito"),
-               h3("Vector Survivorship Under Exponential Mortality"),
-               p("This plot shows the probability that a vector survives t days after emergence,
-                 assuming a constant daily survival probability p and exponential mortality model."),
-               p("The survivorship function is S(t) = p^t, where p is the daily survival probability."),
-               # Survivorship curve under exponential mortality (S(t) = p^t).
+               h3("Vector survivorship under constant exponential mortality"),
+               p(
+                  "This plot shows the probability that a mosquito survives t days after emergence under S(t) = p^t."
+               ),
                plotOutput("Survivorship"),
                p(textOutput("life_expect")),
                br(),
                h4("Interpretation"),
-               p("Under the exponential mortality model:"),
                tags$ul(
-                  tags$li("The mortality rate (μ = -ln(p)) is constant over time"),
-                  tags$li("There is no senescence – vectors do not 'age'"),
-                  tags$li("The probability of dying is the same each day regardless of current age"),
-                  tags$li("This is a simplification: real mosquito populations show age-dependent mortality")
+                  tags$li("The mortality hazard μ = -ln(p) is constant over time."),
+                  tags$li("The model has no senescence or other age dependence."),
+                  tags$li("The conditional remaining lifespan after any age is 1/μ because of the memoryless exponential model."),
+                  tags$li("Real mosquitoes may show age-dependent mortality and transmission competence; those processes are outside this v1.0 model.")
                )
             )
          )
@@ -268,37 +259,59 @@ ui <- fluidPage(
 )
 
 server <- function(input, output, session) {
-   # Helper function for critical vector density (snake_case)
    critical_vector_density <- function(mu, D, b, c, a, p, n) {
       mu / (D * b * c * a^2 * p^n)
    }
 
-   # Collect and derive parameters in one place
+   critical_hbr <- function(mu, D, b, c, a, p, n) {
+      mu / (D * b * c * a * p^n)
+   }
+
+   vectorial_capacity <- function(m, a, p, n, mu) {
+      (m * a^2 * p^n) / mu
+   }
+
+   scenario_reproduction_number <- function(C, b, c, D) {
+      C * b * c * D
+   }
+
    params <- reactive({
       p <- input$p
-      # Guardrail: p must be strictly between 0 and 1 to define μ = -ln p and probabilities.
-      if (p <= 0 || p >= 1) {
+      if (is.null(p) || p <= 0 || p >= 1) {
          return(NULL)
       }
+
       h <- input$h
       g <- input$g
       n <- input$n
-      # a: human biting rate per vector per day = probability of biting the focal host per cycle / cycle length
-      a <- h / g # human biting rate per vector per day
       D <- input$D
       b <- input$b
       c <- input$c
-      # Exponential mortality: if daily survival is p, then μ = -ln p per day (constant hazard).
-      mu <- -log(p) # exponential mortality rate (1/day)
+
+      if (
+         is.null(h) || is.null(g) || is.null(n) || is.null(D) ||
+            is.null(b) || is.null(c) || g <= 0
+      ) {
+         return(NULL)
+      }
+
+      a <- h / g
+      mu <- -log(p)
 
       list(
-         p = p, h = h, g = g, n = n,
-         a = a, D = D, b = b, c = c, mu = mu
+         p = p,
+         h = h,
+         g = g,
+         n = n,
+         a = a,
+         D = D,
+         b = b,
+         c = c,
+         mu = mu
       )
    })
 
-   # Preset scenarios --------------------------------------------------------
-   # 1) High transmission baseline (An. gambiae-ish)
+   # Illustrative teaching presets -----------------------------------------
    observeEvent(input$preset_baseline, {
       updateSliderInput(session, "p", value = 0.90)
       updateSliderInput(session, "h", value = 0.90)
@@ -310,7 +323,6 @@ server <- function(input, output, session) {
       updateSliderInput(session, "m_current", value = 50)
    })
 
-   # 2) LLINs (reduced host feeding + slightly lower survival)
    observeEvent(input$preset_llin, {
       updateSliderInput(session, "p", value = 0.85)
       updateSliderInput(session, "h", value = 0.25)
@@ -322,7 +334,6 @@ server <- function(input, output, session) {
       updateSliderInput(session, "m_current", value = 25)
    })
 
-   # 3) IRS (strong reduction in survival)
    observeEvent(input$preset_irs, {
       updateSliderInput(session, "p", value = 0.75)
       updateSliderInput(session, "h", value = 0.90)
@@ -334,7 +345,6 @@ server <- function(input, output, session) {
       updateSliderInput(session, "m_current", value = 25)
    })
 
-   # 4) Partial immunity (shorter infectious period + slightly lower b, c)
    observeEvent(input$preset_immunity, {
       updateSliderInput(session, "p", value = 0.90)
       updateSliderInput(session, "h", value = 0.90)
@@ -346,7 +356,6 @@ server <- function(input, output, session) {
       updateSliderInput(session, "m_current", value = 50)
    })
 
-   # 5) Genetic / larval suppression (strong reduction in m)
    observeEvent(input$preset_suppression, {
       updateSliderInput(session, "p", value = 0.90)
       updateSliderInput(session, "h", value = 0.90)
@@ -358,48 +367,40 @@ server <- function(input, output, session) {
       updateSliderInput(session, "m_current", value = 5)
    })
 
-   # Critical vector density m for R0 = 1
-   # From R0 = (m a^2 p^n / μ) * b c D, set R0 = 1 and solve for m:
-   #   m* = μ / (D * b * c * a^2 * p^n)
    output$criticalM <- renderText({
       par <- params()
       if (is.null(par)) {
-         return("Choose a daily survival probability strictly between 0 and 1.")
+         return("Choose valid parameters.")
       }
       if (par$a <= 0) {
-         return("With a = 0 there is no human biting and R₀ = 0, so no finite critical vector density exists.")
+         return("With a = 0 there is no human blood feeding and R = 0, so no finite critical mosquito density exists.")
       }
       if (par$b <= 0 || par$c <= 0 || par$D <= 0) {
-         return("With b = 0, c = 0, or D = 0 there is no transmission (R₀ = 0), so no finite critical vector density.")
+         return("With b = 0, c = 0, or D = 0 there is no transmission (R = 0), so no finite critical mosquito density exists.")
       }
-      M <- critical_vector_density(par$mu, par$D, par$b, par$c, par$a, par$p, par$n)
-      paste("Critical density for R₀ = 1 =", round(M, 2), "vectors/host")
+      M <- critical_vector_density(
+         par$mu, par$D, par$b, par$c, par$a, par$p, par$n
+      )
+      paste("Critical mosquito density for R = 1 =", round(M, 2), "mosquitoes/human")
    })
 
-   # Critical human biting rate ma for R0 = 1 (text only)
-   # Using R0 = (m a^2 p^n / μ) * b c D, set MA = m a => R0 = (MA * a * p^n / μ)*b c D,
-   # then solve for MA: MA* = μ / (D * b * c * a * p^n)
-   output$criticalMA <- renderText({
+   output$criticalHBR <- renderText({
       par <- params()
       if (is.null(par)) {
          return("")
       }
       if (par$a <= 0) {
-         return("Critical human biting rate is undefined when a = 0 (R₀ = 0).")
+         return("Critical HBR is undefined when a = 0 (R = 0).")
       }
       if (par$b <= 0 || par$c <= 0 || par$D <= 0) {
-         return("Critical human biting rate is undefined when b = 0, c = 0, or D = 0 (R₀ = 0).")
+         return("Critical HBR is undefined when b = 0, c = 0, or D = 0 (R = 0).")
       }
-      MA <- par$mu / (par$D * par$b * par$c * par$a * par$p^par$n)
-      paste(
-         "Critical human biting rate for R₀ = 1 =",
-         round(MA, 2), "bites/host/day"
+      HBR <- critical_hbr(
+         par$mu, par$D, par$b, par$c, par$a, par$p, par$n
       )
+      paste("Critical human biting rate (HBR) for R = 1 =", round(HBR, 2), "bites/human/day")
    })
 
-   # Expectation of infective life
-   # Conditional on surviving the EIP, remaining expected life is 1/μ.
-   # Weighting by survival to the EIP gives p^n/μ per mosquito at emergence.
    output$e <- renderText({
       par <- params()
       if (is.null(par)) {
@@ -408,44 +409,45 @@ server <- function(input, output, session) {
       e_inf <- par$p^par$n / par$mu
       paste(
          "Expected infectious life per mosquito at emergence =",
-         round(e_inf, 2), "days"
+         round(e_inf, 2),
+         "days"
       )
    })
 
-   # Expectation of lifespan at emergence (under exponential mortality)
-   # E[T] = 1/μ days.
    output$life_expect <- renderText({
       par <- params()
       if (is.null(par)) {
          return("")
       }
       e_life <- 1 / par$mu
-      paste("Expectation of lifespan at emergence =", round(e_life, 1), "days")
+      paste("Expected lifespan at emergence =", round(e_life, 1), "days")
    })
 
-   # Vectorial capacity as a function of m
-   # Plots C(m) = (m a^2 p^n)/μ on a log10 m axis and marks the R0=1 horizontal threshold and critical m.
    output$CPlot <- renderPlot({
       par <- params()
       if (is.null(par)) {
          return()
       }
+
       if (par$a <= 0) {
          par(bty = "n")
          plot.new()
-         title(main = "Vectorial Capacity as a function of vector density")
-         text(0.5, 0.5, "C = 0 because the human biting rate is zero")
+         title(main = "Vectorial capacity as a function of mosquito density")
+         text(0.5, 0.5, "C = 0 because the human blood-feeding rate is zero")
          return()
       }
+
       m <- 10^seq(-2, 3, length.out = 500)
-      C <- (m * par$a^2 * par$p^par$n) / par$mu
+      C <- vectorial_capacity(m, par$a, par$p, par$n, par$mu)
 
       if (par$b > 0 && par$c > 0 && par$D > 0) {
          Ccrit <- 1 / (par$b * par$c * par$D)
-         M <- par$mu / (par$D * par$b * par$c * par$a^2 * par$p^par$n)
+         M <- critical_vector_density(
+            par$mu, par$D, par$b, par$c, par$a, par$p, par$n
+         )
       } else {
-         Ccrit <- NA
-         M <- NA
+         Ccrit <- NA_real_
+         M <- NA_real_
       }
 
       Cpos <- C[C > 0 & is.finite(C)]
@@ -454,52 +456,55 @@ server <- function(input, output, session) {
       ylim <- c(ymin, ymax)
 
       par(bty = "n", las = 1)
-      plot(log10(m), C,
-         col  = "darkgray",
+      plot(
+         log10(m),
+         C,
+         col = "darkgray",
          type = "l",
          ylim = ylim,
-         log  = "y",
-         main = "Vectorial Capacity as a function of vector density",
-         ylab = "Vectorial Capacity C (per day, log scale)",
-         xlab = "No. vectors/host (log10 scale)"
+         log = "y",
+         main = "Vectorial capacity as a function of mosquito density",
+         ylab = "Vectorial capacity C (day⁻¹, log scale)",
+         xlab = "Mosquitoes per human (log10 scale)"
       )
 
-      # horizontal threshold R0 = 1: Ccrit = 1/(b c D)
       if (!is.na(Ccrit) && Ccrit > 0) {
          abline(h = Ccrit, col = "red", lty = 2)
          text(
             x = min(log10(m)) + 0.5,
             y = Ccrit * 1.05,
-            labels = "R₀ = 1 threshold",
-            col = "red", adj = 0
+            labels = "R = 1 threshold",
+            col = "red",
+            adj = 0
          )
 
-         # arrow for critical M where C crosses the threshold
          if (
             is.finite(M) && M >= min(m) && M <= max(m) &&
                Ccrit >= ymin && Ccrit <= ymax
          ) {
             arrows(
-               x0 = log10(M), y0 = Ccrit,
-               x1 = log10(M), y1 = ylim[1],
-               col = "blue", lty = 3
+               x0 = log10(M),
+               y0 = Ccrit,
+               x1 = log10(M),
+               y1 = ylim[1],
+               col = "blue",
+               lty = 3
             )
          }
       }
 
-      # show current m on the curve for reference
       if (input$m_current > 0) {
          abline(v = log10(input$m_current), col = "orange", lwd = 2)
          text(
             x = log10(input$m_current),
             y = ymax * 0.8,
-            labels = "current m", col = "orange", pos = 4
+            labels = "current m",
+            col = "orange",
+            pos = 4
          )
       }
    })
 
-   # Survivorship curve under the constant daily survival p (geometric/exponential survival).
-   # S(t) = p^t gives the probability an individual alive at emergence is still alive t days later.
    output$Survivorship <- renderPlot({
       par <- params()
       if (is.null(par)) {
@@ -510,90 +515,117 @@ server <- function(input, output, session) {
       S <- par$p^t
 
       par(bty = "n", las = 1)
-      plot(t, S,
+      plot(
+         t,
+         S,
          type = "n",
          ylim = c(0, 1),
          main = "Survivorship",
-         xlab = "No. days after emergence (t)",
+         xlab = "Days after emergence (t)",
          ylab = "Proportion surviving after t days"
       )
       lines(t, S, col = "darkgray", lwd = 2)
    })
 
-   # Reactive expression for current vectorial capacity (snake_case)
    c_current <- reactive({
       par <- params()
       if (is.null(par)) {
-         return(NA)
+         return(NA_real_)
       }
-      (input$m_current * par$a^2 * par$p^par$n) / par$mu
+      vectorial_capacity(
+         input$m_current, par$a, par$p, par$n, par$mu
+      )
    })
 
-   # Current C and R0 for the chosen m_current
+   hbr_current <- reactive({
+      par <- params()
+      if (is.null(par)) {
+         return(NA_real_)
+      }
+      input$m_current * par$a
+   })
+
+   r_current <- reactive({
+      par <- params()
+      C <- c_current()
+      if (is.null(par) || is.na(C)) {
+         return(NA_real_)
+      }
+      scenario_reproduction_number(C, par$b, par$c, par$D)
+   })
+
    output$C_current <- renderText({
       value <- c_current()
       if (is.na(value)) {
-         return("Choose valid parameters to compute C and R₀.")
+         return("Choose valid parameters to compute C and R.")
       }
       paste(
          "Current vectorial capacity C =",
          round(value, 3),
-         "infectious bites per host per day (given m =",
-         input$m_current, ")."
+         "day⁻¹."
       )
    })
 
-   output$R0_current <- renderText({
-      par <- params()
-      value <- c_current()
-      if (is.null(par) || is.na(value)) {
+   output$HBR_current <- renderText({
+      value <- hbr_current()
+      if (is.na(value)) {
          return("")
       }
-      R0 <- value * par$b * par$c * par$D
-      paste("Current basic reproduction number R₀ =", round(R0, 2))
+      paste(
+         "Current human biting rate HBR =",
+         round(value, 3),
+         "bites/human/day."
+      )
    })
 
-   output$R0_regime <- renderText({
-      par <- params()
-      value <- c_current()
-      if (is.null(par) || is.na(value)) {
+   output$R_current <- renderText({
+      R <- r_current()
+      if (is.na(R)) {
          return("")
       }
-      R0 <- value * par$b * par$c * par$D
+      paste("Current scenario reproduction number R =", round(R, 2))
+   })
 
-      # Simple qualitative classification around the threshold R0=1
-      if (R0 <= 0) {
-         "Regime: R₀ = 0 → no transmission under the selected parameters 🛡️"
-      } else if (R0 < 1) {
-         "Regime: R₀ < 1 → transmission cannot be sustained ❄️"
-      } else if (abs(R0 - 1) < 1e-8) {
-         "Regime: R₀ = 1 → transmission threshold ⚖️"
+   output$R_regime <- renderText({
+      R <- r_current()
+      if (is.na(R)) {
+         return("")
+      }
+
+      if (R <= 0) {
+         "Regime: R = 0 → no transmission under the selected parameters"
+      } else if (R < 1) {
+         "Regime: R < 1 → infections decline near the disease-free state"
+      } else if (abs(R - 1) < 1e-8) {
+         "Regime: R = 1 → critical transmission threshold"
       } else {
-         "Regime: R₀ > 1 → sustained transmission possible 🔥"
+         "Regime: R > 1 → sustained transmission is possible under the model assumptions"
       }
    })
 
-   # Small summary table -----------------------------------------------------
    output$summaryTable <- renderTable({
       par <- params()
       if (is.null(par)) {
          return(NULL)
       }
+
       m <- input$m_current
-      C_current <- (m * par$a^2 * par$p^par$n) / par$mu
-      R0 <- C_current * par$b * par$c * par$D
+      C <- c_current()
+      HBR <- hbr_current()
+      R <- r_current()
 
       data.frame(
          Quantity = c(
             "Daily survival p",
-            "Feeding probability on host h",
+            "Human-meal probability h",
             "Gonotrophic cycle g",
             "EIP n",
-            "Human biting rate a = h/g",
-            "Duration of infectivity D",
-            "Current vector density m",
+            "Human blood-feeding rate a = h/g",
+            "Effective infectious duration D",
+            "Current mosquito density m",
+            "Current human biting rate HBR = ma",
             "Current vectorial capacity C",
-            "Current basic reproduction number R₀"
+            "Current scenario reproduction number R"
          ),
          Value = c(
             round(par$p, 3),
@@ -603,18 +635,20 @@ server <- function(input, output, session) {
             round(par$a, 3),
             round(par$D, 1),
             round(m, 1),
-            signif(C_current, 3),
-            signif(R0, 3)
+            signif(HBR, 3),
+            signif(C, 3),
+            signif(R, 3)
          ),
          Units = c(
             "probability",
             "probability",
             "days",
             "days",
-            "bites per mosquito per day",
+            "human blood meals per mosquito per day",
             "days",
-            "vectors per host",
-            "infectious bites per host per day",
+            "mosquitoes per human",
+            "bites per human per day",
+            "day⁻¹",
             "dimensionless"
          ),
          stringsAsFactors = FALSE
@@ -622,5 +656,4 @@ server <- function(input, output, session) {
    })
 }
 
-# Launch the app
 shinyApp(ui = ui, server = server)
