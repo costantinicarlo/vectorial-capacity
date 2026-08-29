@@ -9,6 +9,13 @@ load_script <- function(filename) {
   environment
 }
 
+output_html <- function(value) {
+  if (is.list(value) && !is.null(value$html)) {
+    return(as.character(value$html))
+  }
+  as.character(value)
+}
+
 set_default_inputs <- function(session, m_current = 10) {
   session$setInputs(
     p = 0.8,
@@ -49,7 +56,12 @@ test_that("scenario reproduction number is C times b times c times D", {
 
     expect_equal(r_current(), expected_R, tolerance = 1e-12)
     expect_equal(r_current(), 1.478212058516231, tolerance = 1e-12)
-    expect_match(output$R_current, "scenario reproduction number R")
+    expect_match(output_html(output$R_current), "scenario reproduction number")
+    expect_match(
+      output_html(output$R_current),
+      "\\(R=1.48\\)",
+      fixed = TRUE
+    )
   })
 })
 
@@ -61,7 +73,12 @@ test_that("human biting rate is m times per-mosquito human blood-feeding rate", 
 
     expect_equal(hbr_current(), 10 * (0.5 / 2.5), tolerance = 1e-12)
     expect_equal(hbr_current(), 2, tolerance = 1e-12)
-    expect_match(output$HBR_current, "human biting rate HBR")
+    expect_match(output_html(output$HBR_current), "human biting rate")
+    expect_match(
+      output_html(output$HBR_current),
+      "\\(\\mathrm{HBR}=2.000\\)",
+      fixed = TRUE
+    )
   })
 })
 
@@ -80,7 +97,12 @@ test_that("critical mosquito density returns R exactly equal to one", {
 
     expect_equal(m_star, 6.76492925516897, tolerance = 1e-12)
     expect_equal(R_star, 1, tolerance = 1e-12)
-    expect_match(output$criticalM, "Critical mosquito density for R = 1")
+    expect_match(output_html(output$criticalM), "Critical mosquito density")
+    expect_match(
+      output_html(output$criticalM),
+      "\\(R=1\\)",
+      fixed = TRUE
+    )
   })
 })
 
@@ -100,7 +122,12 @@ test_that("critical HBR returns the unit transmission threshold", {
 
     expect_equal(hbr_star, 1.352985851033794, tolerance = 1e-12)
     expect_equal(R_star, 1, tolerance = 1e-12)
-    expect_match(output$criticalHBR, "Critical human biting rate")
+    expect_match(output_html(output$criticalHBR), "Critical human biting rate")
+    expect_match(
+      output_html(output$criticalHBR),
+      "\\(\\mathrm{HBR}^*=1.35\\)",
+      fixed = TRUE
+    )
   })
 })
 
@@ -124,7 +151,12 @@ test_that("expected infectious lifespan metric has the intended interpretation",
       4.481420117724551,
       tolerance = 1e-12
     )
-    expect_match(output$e, "per mosquito at emergence")
+    expect_match(output_html(output$e), "per mosquito at emergence")
+    expect_match(
+      output_html(output$e),
+      "\\(p^n/\\mu\\)",
+      fixed = TRUE
+    )
   })
 })
 
@@ -146,8 +178,11 @@ test_that("main app handles zero human blood feeding without failing", {
     expect_equal(c_current(), 0)
     expect_equal(hbr_current(), 0)
     expect_equal(r_current(), 0)
-    expect_match(output$criticalM, "no finite critical mosquito density")
-    expect_match(output$criticalHBR, "undefined")
+    expect_match(
+      output_html(output$criticalM),
+      "no finite critical mosquito density"
+    )
+    expect_match(output_html(output$criticalHBR), "undefined")
     expect_silent(output$CPlot)
   })
 })
@@ -161,9 +196,21 @@ test_that("zero mosquito density produces zero C, HBR and R", {
     expect_equal(c_current(), 0)
     expect_equal(hbr_current(), 0)
     expect_equal(r_current(), 0)
-    expect_match(output$C_current, "C = 0")
-    expect_match(output$HBR_current, "HBR = 0")
-    expect_match(output$R_current, "R = 0")
+    expect_match(
+      output_html(output$C_current),
+      "\\(C=0.000",
+      fixed = TRUE
+    )
+    expect_match(
+      output_html(output$HBR_current),
+      "\\(\\mathrm{HBR}=0.000\\)",
+      fixed = TRUE
+    )
+    expect_match(
+      output_html(output$R_current),
+      "\\(R=0.00\\)",
+      fixed = TRUE
+    )
   })
 })
 
@@ -183,7 +230,10 @@ test_that("zero transmission probabilities or infectious duration imply R equals
     )
 
     expect_equal(r_current(), 0)
-    expect_match(output$criticalM, "no finite critical mosquito density")
-    expect_match(output$R_regime, "no transmission")
+    expect_match(
+      output_html(output$criticalM),
+      "no finite critical mosquito density"
+    )
+    expect_match(output_html(output$R_regime), "no transmission")
   })
 })
